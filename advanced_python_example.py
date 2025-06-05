@@ -1,18 +1,18 @@
 """
-Advanced Example: Customer Support Agent with Tygent
--------------------------------------------------
-This example demonstrates how to build a customer support agent
-using Tygent's DAG-based optimization capabilities.
+Advanced Example: Customer Support Agent with Tygent - Simple Accelerate Pattern
+--------------------------------------------------------------------------------
+This example demonstrates how to accelerate an existing customer support workflow
+using Tygent's accelerate() function for automatic parallel optimization.
 
-The agent can:
+The support agent workflow can:
 1. Analyze customer questions
-2. Search a knowledge base
+2. Search a knowledge base  
 3. Check customer purchase history
 4. Generate personalized responses
 5. Recommend related products
 
-The DAG enables parallel execution of knowledge base search
-and customer history lookup, optimizing response time.
+Tygent automatically identifies and parallelizes independent operations
+like knowledge base search and customer history lookup.
 """
 
 import os
@@ -20,8 +20,8 @@ import asyncio
 import time
 from typing import Dict, Any, List
 import sys
-sys.path.append('./tygent-py')
-from tygent import DAG, ToolNode, LLMNode, MemoryNode, Scheduler, AdaptiveExecutor
+sys.path.append('../tygent-py')
+from tygent import accelerate
 
 # Set your API key - in production use environment variables
 # os.environ["OPENAI_API_KEY"] = "your-api-key"  # Uncomment and set your API key
@@ -195,112 +195,83 @@ async def generate_response(inputs: Dict[str, Any]) -> Dict[str, Any]:
         "response_length": len(response)
     }
 
+# Your existing customer support workflow - no changes needed
+async def customer_support_workflow(question: str, user_id: str) -> str:
+    """Complete customer support workflow that processes a customer question."""
+    print(f"Processing customer query: '{question}' for user: {user_id}")
+    
+    # Step 1: Analyze the question
+    analysis = await analyze_question({"question": question})
+    
+    # Step 2: Search knowledge base (depends on analysis)
+    knowledge = await search_knowledge_base({
+        "intent": analysis["intent"],
+        "keywords": analysis["keywords"]
+    })
+    
+    # Step 3: Get customer history (independent of analysis)
+    customer_info = await get_customer_history({"user_id": user_id})
+    
+    # Step 4: Generate recommendations (depends on customer history)
+    recommendations = await generate_product_recommendations({
+        "purchase_history": customer_info.get("purchase_history", [])
+    })
+    
+    # Step 5: Generate final response (depends on all previous steps)
+    response = await generate_response({
+        "question": question,
+        "knowledge_result": knowledge["knowledge_result"],
+        "customer_name": customer_info.get("customer_name", ""),
+        "subscription_tier": customer_info.get("subscription_tier", ""),
+        "recommended_products": recommendations["recommended_products"]
+    })
+    
+    return response["response_text"]
+
 async def main():
-    print("Creating Customer Support Agent with Tygent...\n")
+    print("Advanced Customer Support Agent with Tygent")
+    print("===========================================\n")
     
     # Define our customer query scenario
     customer_query = "Can I return the headphones I bought last month?"
     customer_id = "user123"
     
-    print(f"Customer query: \"{customer_query}\"")
+    print(f"Customer query: '{customer_query}'")
     print(f"Customer ID: {customer_id}\n")
     
-    # Create a DAG for our customer support workflow
-    dag = DAG("customer_support_agent")
+    print("=== Standard Execution ===")
+    start_time = time.time()
     
-    # Create nodes for each step of the workflow
-    analyze_node = ToolNode("analyze", analyze_question)
-    knowledge_node = ToolNode("knowledge", search_knowledge_base)
-    customer_node = ToolNode("customer", get_customer_history)
-    recommend_node = ToolNode("recommend", generate_product_recommendations)
-    response_node = ToolNode("response", generate_response)
+    # Run your existing workflow normally
+    standard_response = await customer_support_workflow(customer_query, customer_id)
     
-    # Add nodes to the DAG
-    dag.add_node(analyze_node)
-    dag.add_node(knowledge_node)
-    dag.add_node(customer_node)
-    dag.add_node(recommend_node)
-    dag.add_node(response_node)
+    standard_time = time.time() - start_time
+    print(f"Standard execution time: {standard_time:.2f} seconds")
+    print(f"Response: {standard_response[:100]}...\n")
     
-    # Define the workflow connections
-    # analyze_question -> search_knowledge_base
-    dag.add_edge("analyze", "knowledge", {
-        "intent": "intent",
-        "keywords": "keywords"
-    })
+    print("=== Accelerated Execution ===")
+    start_time = time.time()
     
-    # customer_history is independent of question analysis
-    # No edge needed between analyze and customer
+    # Only change: wrap your existing workflow with accelerate()
+    accelerated_workflow = accelerate(customer_support_workflow)
+    accelerated_response = await accelerated_workflow(customer_query, customer_id)
     
-    # get_customer_history -> generate_product_recommendations
-    dag.add_edge("customer", "recommend", {
-        "purchase_history": "purchase_history"
-    })
+    accelerated_time = time.time() - start_time
+    print(f"Accelerated execution time: {accelerated_time:.2f} seconds")
+    print(f"Response: {accelerated_response[:100]}...")
     
-    # All information flows to the response generation
-    dag.add_edge("analyze", "response", {})  # Just to pass the original question
-    dag.add_edge("knowledge", "response", {
-        "knowledge_result": "knowledge_result"
-    })
-    dag.add_edge("customer", "response", {
-        "customer_name": "customer_name",
-        "subscription_tier": "subscription_tier"
-    })
-    dag.add_edge("recommend", "response", {
-        "recommended_products": "recommended_products"
-    })
+    # Results should be identical
+    print(f"\nResults match: {standard_response == accelerated_response}")
     
-    # Create a parallel executor
-    executor = AdaptiveExecutor(dag)
+    if standard_time > accelerated_time:
+        improvement = ((standard_time - accelerated_time) / standard_time) * 100
+        print(f"Performance improvement: {improvement:.1f}% faster")
     
-    print("=== Running Sequential Execution for comparison ===")
-    sequential_start = time.time()
-    
-    # Simulate sequential execution manually
-    query_analysis = await analyze_question({"question": customer_query})
-    kb_results = await search_knowledge_base(query_analysis)
-    customer_info = await get_customer_history({"user_id": customer_id})
-    product_recs = await generate_product_recommendations(customer_info)
-    
-    # Combine all inputs for response generation
-    response_inputs = {
-        "question": customer_query,
-        "knowledge_result": kb_results["knowledge_result"],
-        "customer_name": customer_info["customer_name"],
-        "subscription_tier": customer_info["subscription_tier"],
-        "recommended_products": product_recs["recommended_products"]
-    }
-    
-    final_response = await generate_response(response_inputs)
-    sequential_time = time.time() - sequential_start
-    
-    print(f"\nSequential execution time: {sequential_time:.2f} seconds\n")
-    
-    print("=== Running Parallel Execution with Tygent ===")
-    # Execute the DAG with input data
-    result = await executor.execute({
-        "question": customer_query,
-        "user_id": customer_id
-    })
-    
-    # Extract the final response
-    tygent_response = result["results"]["response"]["response_text"]
-    tygent_time = result["total_time"]
-    
-    print(f"\nTygent parallel execution time: {tygent_time:.2f} seconds")
-    print(f"Performance improvement: {((sequential_time - tygent_time) / sequential_time * 100):.1f}%\n")
-    
-    print("=== Final Response ===")
-    print(tygent_response)
-    
-    print("\n=== Node Execution Times ===")
-    for node_id, exec_time in result["execution_times"].items():
-        print(f"{node_id}: {exec_time:.2f} seconds")
-    
-    print("\n=== Execution Graph Analysis ===")
-    print("Sequential path: analyze -> knowledge -> response")
-    print("Parallel path 1: customer -> recommend -> response")
-    print(f"Critical path: {max(result['execution_times'].items(), key=lambda x: x[1])[0]}")
+    print("\n✅ Behind the scenes, Tygent automatically:")
+    print("   • Identified that knowledge search and customer lookup are independent")
+    print("   • Ran those operations in parallel")
+    print("   • Maintained the correct dependency order for final response")
+    print("   • Delivered identical results with improved performance")
 
 if __name__ == "__main__":
     asyncio.run(main())
