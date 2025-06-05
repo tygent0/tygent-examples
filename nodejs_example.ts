@@ -1,29 +1,30 @@
 /**
- * Example usage of the Tygent Node.js package
+ * Example usage of the Tygent Node.js package - Simple Accelerate Pattern
+ * Shows how to use Tygent's accelerate() function for drop-in optimization.
  */
 
-import { DAG, ToolNode, LLMNode, MemoryNode, Scheduler, AdaptiveExecutor } from 'tygent';
+import { accelerate } from '../tygent-js/src/accelerate';
 
 // Set your API key in environment variables
 // process.env.OPENAI_API_KEY = 'your-api-key'; // Uncomment and set your API key
 
 /**
- * Example search tool function
+ * Example search function
  */
-async function searchFunction(inputs: any): Promise<any> {
-  const query = inputs.query || 'default query';
+async function searchData(query: string): Promise<string> {
   console.log(`Searching for: ${query}`);
   // In a real implementation, this would call a search API
-  return { results: `Search results for '${query}'` };
+  await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API call
+  return `Search results for '${query}'`;
 }
 
 /**
- * Example weather tool function
+ * Example weather function
  */
-async function weatherFunction(inputs: any): Promise<any> {
-  const location = inputs.location || 'San Francisco';
+async function getWeather(location: string): Promise<any> {
   console.log(`Getting weather for: ${location}`);
   // In a real implementation, this would call a weather API
+  await new Promise(resolve => setTimeout(resolve, 300)); // Simulate API call
   return { 
     temperature: 72, 
     conditions: 'Sunny', 
@@ -32,71 +33,58 @@ async function weatherFunction(inputs: any): Promise<any> {
 }
 
 /**
+ * Example analysis function
+ */
+async function analyzeData(searchResults: string, weatherData: any): Promise<string> {
+  console.log('Analyzing combined data...');
+  await new Promise(resolve => setTimeout(resolve, 200)); // Simulate processing
+  return `Analysis: ${searchResults} combined with weather ${JSON.stringify(weatherData)}`;
+}
+
+/**
+ * Your existing workflow function - no changes needed
+ */
+async function myExistingWorkflow(): Promise<string> {
+  console.log('Starting workflow...');
+  
+  // These calls normally run sequentially
+  const searchResults = await searchData('artificial intelligence advancements');
+  const weatherData = await getWeather('New York');
+  const analysis = await analyzeData(searchResults, weatherData);
+  
+  console.log(`Final result: ${analysis}`);
+  return analysis;
+}
+
+/**
  * Main execution function
  */
 async function main() {
-  // Create a DAG
-  const dag = new DAG('example_workflow');
+  console.log('=== Standard Execution ===');
+  const startTime1 = Date.now();
   
-  // Create nodes
-  const searchNode = new ToolNode('search', searchFunction);
-  const weatherNode = new ToolNode('weather', weatherFunction);
-  const processNode = new LLMNode(
-    'process',
-    'gpt-4o', // the newest OpenAI model is "gpt-4o" which was released May 13, 2024
-    'Analyze the following information:\nSearch results: {search_results}\nWeather: {temperature}°F in {location}, conditions: {conditions}'
-  );
+  // Run your existing workflow normally
+  const result1 = await myExistingWorkflow();
   
-  // Add nodes to the DAG
-  dag.addNode(searchNode);
-  dag.addNode(weatherNode);
-  dag.addNode(processNode);
+  const standardTime = (Date.now() - startTime1) / 1000;
+  console.log(`Standard execution time: ${standardTime.toFixed(2)} seconds\n`);
   
-  // Connect nodes with edges
-  dag.addEdge('search', 'process', { results: 'search_results' });
-  dag.addEdge('weather', 'process', {
-    temperature: 'temperature',
-    conditions: 'conditions',
-    location: 'location'
-  });
+  console.log('=== Accelerated Execution ===');
+  const startTime2 = Date.now();
   
-  // Define a condition for optional edge traversal
-  // This is an advanced feature that shows conditional execution paths
-  const temperatureCheck = (outputs: Record<string, any>) => {
-    // Only execute this path if the temperature is above 70°F
-    return outputs.weather?.temperature > 70;
-  };
+  // Only change: wrap your existing function with accelerate()
+  const acceleratedWorkflow = accelerate(myExistingWorkflow);
+  const result2 = await acceleratedWorkflow();
   
-  // Create an advanced scheduler that utilizes parallelism
-  const executor = new AdaptiveExecutor(dag);
+  const acceleratedTime = (Date.now() - startTime2) / 1000;
+  console.log(`Accelerated execution time: ${acceleratedTime.toFixed(2)} seconds`);
   
-  try {
-    // Execute the DAG with input data
-    const result = await executor.execute({
-      query: 'artificial intelligence advancements',
-      location: 'New York'
-    });
-    
-    // Print the results
-    console.log('\n--- Execution Results ---');
-    console.log(`Total execution time: ${result.totalTime.toFixed(2)} seconds`);
-    
-    console.log('\nNode execution times:');
-    Object.entries(result.executionTimes).forEach(([nodeId, timeTaken]) => {
-      console.log(`  - ${nodeId}: ${timeTaken.toFixed(2)} seconds`);
-    });
-    
-    console.log('\nProcessed Result:');
-    if (result.results.process) {
-      const processResult = result.results.process;
-      if ('response' in processResult) {
-        console.log(processResult.response);
-      } else if ('error' in processResult) {
-        console.log(`Error: ${processResult.error}`);
-      }
-    }
-  } catch (error: any) {
-    console.error('Error executing DAG:', error.message);
+  // Results should be identical
+  console.log(`\nResults match: ${result1 === result2}`);
+  
+  if (standardTime > acceleratedTime) {
+    const improvement = ((standardTime - acceleratedTime) / standardTime) * 100;
+    console.log(`Performance improvement: ${improvement.toFixed(1)}% faster`);
   }
 }
 

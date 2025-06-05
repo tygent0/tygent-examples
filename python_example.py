@@ -1,79 +1,76 @@
 """
-Example usage of the Tygent Python package.
+Example usage of the Tygent Python package - Simple Accelerate Pattern
+Shows how to use Tygent's accelerate() function for drop-in optimization.
 """
 
 import os
 import asyncio
 import sys
-sys.path.append('./tygent-py')
-from tygent import DAG, ToolNode, LLMNode, MemoryNode, Scheduler, AdaptiveExecutor
+sys.path.append('../tygent-py')
+from tygent import accelerate
 
 # Set your API key - in production use environment variables
 # os.environ["OPENAI_API_KEY"] = "your-api-key"  # Uncomment and set your API key
 
-async def search_function(inputs):
-    """Example search tool function."""
-    query = inputs.get("query", "default query")
+async def search_data(query):
+    """Example search function."""
     print(f"Searching for: {query}")
     # In real implementation, this would call a search API
-    return {"results": f"Search results for '{query}'"}
+    await asyncio.sleep(0.5)  # Simulate API call
+    return f"Search results for '{query}'"
 
-async def weather_function(inputs):
-    """Example weather tool function."""
-    location = inputs.get("location", "San Francisco")
+async def get_weather(location):
+    """Example weather function."""
     print(f"Getting weather for: {location}")
     # In real implementation, this would call a weather API
+    await asyncio.sleep(0.3)  # Simulate API call
     return {"temperature": 72, "conditions": "Sunny", "location": location}
 
+async def analyze_data(search_results, weather_data):
+    """Example analysis function."""
+    print("Analyzing combined data...")
+    await asyncio.sleep(0.2)  # Simulate processing
+    return f"Analysis: {search_results} combined with weather {weather_data}"
+
+# Your existing workflow function - no changes needed
+async def my_existing_workflow():
+    """Existing workflow that you want to accelerate."""
+    print("Starting workflow...")
+    
+    # These calls normally run sequentially
+    search_results = await search_data("artificial intelligence advancements")
+    weather_data = await get_weather("New York")
+    analysis = await analyze_data(search_results, weather_data)
+    
+    print(f"Final result: {analysis}")
+    return analysis
+
 async def main():
-    # Create a DAG
-    dag = DAG("example_workflow")
+    print("=== Standard Execution ===")
+    start_time = asyncio.get_event_loop().time()
     
-    # Create nodes
-    search_node = ToolNode("search", search_function)
-    weather_node = ToolNode("weather", weather_function)
-    process_node = LLMNode(
-        "process", 
-        "gpt-4o",  # Use the latest OpenAI model
-        "Analyze the following information:\nSearch results: {search_results}\nWeather: {temperature}°F in {location}, conditions: {conditions}"
-    )
+    # Run your existing workflow normally
+    result1 = await my_existing_workflow()
     
-    # Add nodes to the DAG
-    dag.add_node(search_node)
-    dag.add_node(weather_node)
-    dag.add_node(process_node)
+    standard_time = asyncio.get_event_loop().time() - start_time
+    print(f"Standard execution time: {standard_time:.2f} seconds\n")
     
-    # Connect nodes with edges
-    dag.add_edge("search", "process", {"results": "search_results"})
-    dag.add_edge("weather", "process", {
-        "temperature": "temperature",
-        "conditions": "conditions",
-        "location": "location"
-    })
+    print("=== Accelerated Execution ===")
+    start_time = asyncio.get_event_loop().time()
     
-    # Create a scheduler that can execute the DAG
-    scheduler = Scheduler(dag)
+    # Only change: wrap your existing function with accelerate()
+    accelerated_workflow = accelerate(my_existing_workflow)
+    result2 = await accelerated_workflow()
     
-    # Execute the DAG with input data
-    result = await scheduler.execute({
-        "query": "artificial intelligence advancements",
-        "location": "New York"
-    })
+    accelerated_time = asyncio.get_event_loop().time() - start_time
+    print(f"Accelerated execution time: {accelerated_time:.2f} seconds")
     
-    # Print the results
-    print("\n--- Execution Results ---")
-    print(f"Total execution time: {result['total_time']:.2f} seconds")
-    print("\nNode execution times:")
-    for node_id, time_taken in result['execution_times'].items():
-        print(f"  - {node_id}: {time_taken:.2f} seconds")
+    # Results should be identical
+    print(f"\nResults match: {result1 == result2}")
     
-    print("\nProcessed Result:")
-    if "process" in result["results"]:
-        process_result = result["results"]["process"]
-        if "response" in process_result:
-            print(process_result["response"])
-        elif "error" in process_result:
-            print(f"Error: {process_result['error']}")
+    if standard_time > accelerated_time:
+        improvement = ((standard_time - accelerated_time) / standard_time) * 100
+        print(f"Performance improvement: {improvement:.1f}% faster")
 
 if __name__ == "__main__":
     asyncio.run(main())

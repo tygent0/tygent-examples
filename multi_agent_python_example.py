@@ -3,38 +3,35 @@ Example of using Tygent's multi-agent capabilities in Python.
 
 This example demonstrates how to:
 1. Create multiple agents with different roles
-2. Configure optimization settings for parallel execution
-3. Execute a conversation between multiple agents
-4. Analyze the critical path in the conversation DAG
+2. Use MultiAgentManager to coordinate agent execution
+3. Execute agents in parallel for improved performance
 """
 
 import asyncio
-from typing import Dict, Any
-from tygent import (
-    MultiAgentManager,
-    AgentRole,
-    OptimizationSettings,
-    ToolNode
-)
+import sys
+import os
+sys.path.append('../tygent-py')
 
-# Define agent roles
-roles = {
-    "researcher": AgentRole(
-        name="Researcher",
-        description="Specializes in finding and analyzing information.",
-        system_prompt="You are a skilled researcher who excels at gathering relevant information. Your goal is to provide comprehensive, accurate, and well-sourced information about the topic at hand."
-    ),
-    "critic": AgentRole(
-        name="Critic",
-        description="Identifies flaws and suggests improvements.",
-        system_prompt="You are a thoughtful critic who evaluates information critically. Your goal is to identify potential flaws, biases, or gaps in reasoning and suggest improvements."
-    ),
-    "synthesizer": AgentRole(
-        name="Synthesizer",
-        description="Combines insights into a coherent whole.",
-        system_prompt="You are an expert synthesizer who brings together different perspectives. Your goal is to create a cohesive and comprehensive understanding of the topic by incorporating multiple viewpoints."
-    )
-}
+from tygent import MultiAgentManager
+
+# Agent classes that work with MultiAgentManager
+class ResearcherAgent:
+    async def execute(self, inputs):
+        query = inputs.get("query", "unknown query")
+        print(f"Researcher analyzing: {query}")
+        return {"analysis": f"Research findings for: {query}", "confidence": 0.85}
+
+class CriticAgent:
+    async def execute(self, inputs):
+        query = inputs.get("query", "unknown query")
+        print(f"Critic reviewing: {query}")
+        return {"critique": f"Critical analysis of: {query}", "suggestions": ["Consider bias", "Verify sources"]}
+
+class SynthesizerAgent:
+    async def execute(self, inputs):
+        query = inputs.get("query", "unknown query")
+        print(f"Synthesizer combining insights")
+        return {"synthesis": f"Combined insights from research and critique", "final_recommendation": "Proceed with caution"}
 
 async def main():
     """Run the multi-agent example."""
@@ -42,50 +39,32 @@ async def main():
     print("==========================")
     
     # Create a multi-agent manager
-    manager = MultiAgentManager()
+    manager = MultiAgentManager("research_team")
     
-    # Add agents with their roles
-    for agent_id, role in roles.items():
-        manager.add_agent(agent_id, role)
-        print(f"Added agent: {role.name}")
+    # Create agent instances
+    researcher = ResearcherAgent()
+    critic = CriticAgent()
+    synthesizer = SynthesizerAgent()
     
-    # Define query and optimization settings
-    query = "What are the potential benefits and risks of quantum computing?"
+    # Add agents to the manager
+    manager.add_agent("researcher", researcher)
+    manager.add_agent("critic", critic)
+    manager.add_agent("synthesizer", synthesizer)
+    print("Added agents: researcher, critic, synthesizer")
     
-    optimization_settings = OptimizationSettings(
-        batch_messages=False,
-        parallel_thinking=True,  # Agents think in parallel
-        shared_memory=True,      # Agents share memory
-        early_stop_threshold=0.0  # No early stopping
-    )
+    # Execute the multi-agent workflow
+    print(f"\nExecuting multi-agent workflow...")
     
-    print(f"\nExecuting conversation with query: '{query}'")
-    print("Optimization settings:")
-    print(f"- Parallel thinking: {optimization_settings.parallel_thinking}")
-    print(f"- Shared memory: {optimization_settings.shared_memory}")
-    
-    # Create the conversation DAG
-    dag = manager.create_conversation_dag(query, optimization_settings)
-    
-    # Find the critical path
-    critical_path = manager.find_critical_path(dag)
-    print(f"\nCritical path in conversation DAG: {' -> '.join(critical_path)}")
-    
-    # Execute the conversation
-    print("\nExecuting conversation...")
-    results = await manager.execute_conversation(query, optimization_settings)
+    result = await manager.execute({
+        "query": "What are the potential benefits and risks of quantum computing?"
+    })
     
     # Display results
-    print("\nConversation results:")
-    for node_id, result in results.items():
-        if node_id.startswith("agent_"):
-            agent_id = node_id[6:]  # Remove "agent_" prefix
-            role = roles[agent_id]
-            print(f"\n== {role.name}'s response ==")
-            if isinstance(result, dict) and "response" in result:
-                print(result["response"])
+    print("\n=== Multi-Agent Results ===")
+    for agent_name, output in result.items():
+        print(f"{agent_name}: {output}")
     
-    print("\nMulti-agent conversation completed successfully!")
+    print("\nExample completed successfully!")
 
 if __name__ == "__main__":
     asyncio.run(main())

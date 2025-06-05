@@ -3,7 +3,7 @@ Example of integrating Tygent with LangGraph.
 """
 
 import sys
-sys.path.append('./tygent-py')
+sys.path.append('../tygent-py')
 import tygent as tg
 from langchain.prompts import PromptTemplate
 from langchain.chat_models import ChatOpenAI

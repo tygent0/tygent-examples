@@ -1,52 +1,90 @@
 """
-Example of integrating Tygent with LangChain.
+Example of integrating Tygent with LangChain - Simple Accelerate Pattern
+Shows how to use Tygent's accelerate() function with existing LangChain agents.
 """
 
 import sys
-sys.path.append('./tygent-py')
-import tygent as tg
-from langchain.prompts import PromptTemplate
-from langchain.llms import OpenAI
+sys.path.append('../tygent-py')
+from tygent import accelerate
+
+# Mock LangChain components for demonstration
+# In real usage, these would be actual LangChain imports:
+# from langchain.agents import initialize_agent, Tool
+# from langchain.llms import OpenAI
+
+class MockLangChainTool:
+    """Mock LangChain tool for demonstration."""
+    def __init__(self, name, func):
+        self.name = name
+        self.func = func
+
+class MockLangChainAgent:
+    """Mock LangChain agent for demonstration."""
+    def __init__(self, tools, llm):
+        self.tools = tools
+        self.llm = llm
+    
+    def run(self, query):
+        """Simulate LangChain agent execution."""
+        # In real LangChain, this would intelligently use tools
+        results = []
+        for tool in self.tools:
+            if "search" in tool.name.lower() and "search" in query.lower():
+                results.append(f"{tool.name}: {tool.func(query)}")
+            elif "calculator" in tool.name.lower() and any(char.isdigit() for char in query):
+                results.append(f"{tool.name}: {tool.func(query)}")
+        
+        return f"Agent response: {query}. Tool results: {'; '.join(results) if results else 'No tools needed'}"
+
+# Your existing LangChain setup - no changes needed
+def search_func(query):
+    """Example search tool function."""
+    return f"Search results for: {query}"
+
+def calculator_func(expression):
+    """Example calculator tool function."""
+    try:
+        # Simple calculation for demo
+        return f"Calculated: {expression}"
+    except:
+        return "Invalid calculation"
 
 def main():
-    """Run the LangChain integration example."""
+    print("Tygent + LangChain Integration Example")
+    print("=====================================")
     
-    print("\nTygent + LangChain Integration Example")
-    print("======================================\n")
+    # Your existing LangChain agent setup - unchanged
+    print("\n1. Creating LangChain agent with tools...")
     
-    # Create a tygent DAG
-    print("Creating a Tygent DAG...")
-    dag = tg.DAG("langchain_integration")
+    tools = [
+        MockLangChainTool(name="Search", func=search_func),
+        MockLangChainTool(name="Calculator", func=calculator_func),
+    ]
     
-    # Define an LLM node using a LangChain prompt
-    print("Adding an LLM node with a LangChain prompt...")
-    template = "Answer the following question: {question}"
-    prompt = PromptTemplate(template=template, input_variables=["question"])
+    # Your existing agent creation - unchanged
+    agent = MockLangChainAgent(tools=tools, llm="gpt-4")
     
-    llm_node = tg.LLMNode(
-        "answer_generator",
-        model="gpt-3.5-turbo",
-        prompt_template=template,
-        input_schema={"question": str},
-        output_schema={"response": str}
-    )
-    dag.add_node(llm_node)
+    print("2. Testing standard LangChain agent...")
+    query = "Search for AI developments and calculate 2+2"
+    standard_result = agent.run(query)
+    print(f"Standard result: {standard_result}")
     
-    # Execute with Tygent's scheduler
-    print("Executing the DAG with Tygent's scheduler...")
-    scheduler = tg.Scheduler()
+    print("\n3. Accelerating LangChain agent with Tygent...")
     
-    # In a real implementation, this would call an actual LLM API
-    # For now, this is a simulation
-    question = "How do I integrate LangChain with Tygent?"
-    print(f"\nQuestion: {question}")
+    # Only change: wrap your existing agent with accelerate()
+    accelerated_agent = accelerate(agent)
     
-    result = scheduler.execute(dag, {"question": question})
+    print("4. Testing accelerated LangChain agent...")
+    accelerated_result = accelerated_agent.run(query)
+    print(f"Accelerated result: {accelerated_result}")
     
-    print("\nResult:")
-    print(f"  - Node ID: {llm_node.id}")
-    print(f"  - Response: {result[llm_node.id].get('response', 'No response')}")
-    print("\nDAG Execution completed successfully.")
+    print(f"\nResults match: {standard_result == accelerated_result}")
+    print("\n✅ LangChain integration complete!")
+    print("   Behind the scenes, Tygent automatically:")
+    print("   • Analyzes tool dependencies")
+    print("   • Runs independent tools in parallel")
+    print("   • Optimizes execution order")
+    print("   • Maintains exact same agent behavior")
 
 if __name__ == "__main__":
     main()

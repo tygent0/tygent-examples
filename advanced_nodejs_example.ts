@@ -1,21 +1,23 @@
 /**
- * Advanced Example: Product Recommendation Engine with Tygent
- * ---------------------------------------------------------
- * This example demonstrates how to build a sophisticated product
- * recommendation engine using Tygent's DAG-based optimization.
+ * Advanced Example: Product Recommendation Engine with Tygent - Simple Accelerate Pattern
+ * -------------------------------------------------------------------------------------
+ * This example demonstrates how to accelerate an existing product recommendation workflow
+ * using Tygent's accelerate() function for automatic parallel optimization.
  * 
- * The engine can:
+ * The recommendation engine can:
  * 1. Analyze user preferences and browsing history
  * 2. Search product catalog in multiple categories
  * 3. Check inventory availability
  * 4. Fetch detailed product information
  * 5. Generate personalized recommendations
  * 
- * The DAG enables parallel execution of multiple catalog searches
- * and inventory checks, optimizing recommendation generation time.
+ * Tygent automatically identifies and parallelizes independent operations
+ * like catalog searches and inventory checks.
  */
 
-import { DAG, ToolNode, LLMNode, MemoryNode, Scheduler, AdaptiveExecutor } from 'tygent';
+import { accelerate } from '../tygent-js/src/accelerate';
+import { ToolNode } from '../tygent-js/src/nodes';
+import { AdaptiveExecutor } from '../tygent-js/src/index';
 
 // Simulated databases
 const USER_DATABASE = {
