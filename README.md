@@ -110,6 +110,6 @@ The examples demonstrate significant performance improvements when using Tygent'
 
 ## Additional Resources
 
-- [Tygent Python Package](https://github.com/tygent-ai/tygent-py)
-- [Tygent JavaScript Package](https://github.com/tygent-ai/tygent-js)
+- [Tygent Python Package](https://github.com/tygent0/tygent-py)
+- [Tygent JavaScript Package](https://github.com/tygent0/tygent-js)
 - [Tygent Documentation](https://tygent.ai/docs)
