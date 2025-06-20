@@ -1,6 +1,37 @@
 # Tygent Examples
 
-This repository contains example code for using the Tygent packages in Python and TypeScript/JavaScript. These examples demonstrate how Tygent can optimize LLM agent execution using typed Directed Acyclic Graphs (DAGs).
+This repository contains example code for using the Tygent packages in Python and TypeScript/JavaScript. These examples demonstrate how Tygent can optimize LLM agent execution using typed Directed Acyclic Graphs (DAGs) for efficient parallelization and scheduling.
+
+---
+
+## Submodules
+
+This repository includes the following submodules:
+
+- [`tygent-js`](https://github.com/tygent0/tygent-js): JavaScript implementation and examples.
+- [`tygent-py`](https://github.com/tygent0/tygent-py): Python implementation and examples.
+
+### Cloning with Submodules
+
+To clone this repository including its submodules, run:
+
+```bash
+git clone --recurse-submodules https://github.com/tygent0/tygent-examples.git
+```
+
+If you have already cloned the repository, initialize and update the submodules with:
+
+```bash
+git submodule update --init --recursive
+```
+
+To update submodules to their latest versions, run:
+
+```bash
+git submodule update --remote
+```
+
+---
 
 ## Python Examples
 
