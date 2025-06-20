@@ -1,0 +1,6 @@
+[submodule "tygent-js"]
+	path = tygent-js
+	url = https://github.com/tygent0/tygent-js.git
+[submodule "tygent-py"]
+	path = tygent-py
+	url = https://github.com/tygent0/tygent-py.git
